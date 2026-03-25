@@ -6,7 +6,7 @@
 /*   By: voparkan <voparkan@student.42prague.cz>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/22 13:20:05 by voparkan          #+#    #+#             */
-/*   Updated: 2026/03/24 22:08:14 by voparkan         ###   ########.fr       */
+/*   Updated: 2026/03/25 10:42:14 by voparkan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,6 +16,7 @@
 #include <ctype.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 
 typedef struct map {
 	int lines;
@@ -194,15 +195,28 @@ void process_map(bsq_main * m_bsq, bsq_square * square) {
 
 int main(int argc, char **argv) {
 	printf("Hello, World!\n");
-	if (argc == 1) {
-		perror("provide map");
-		return 1;
-	}
 	bsq_main * m_bsq = malloc(sizeof (bsq_main));
 	if (!m_bsq)
 		perror("allocation failed");
 	int i = 1;
 	m_bsq->num_maps = -1;
+	if (argc == 1) {
+		//TODO finish STDIN handling
+		m_bsq->num_maps++;
+		char bud[10];
+		read(STDIN_FILENO, bud, 10);
+		printf("STDIN_FILENO: \n%s", bud);
+		if (STDIN_FILENO != NULL && parser(m_bsq, STDIN_FILENO)) {
+			bsq_square square;
+			square.size = 0; square.i = 0; square.j = 0;
+			process_map(m_bsq, &square);
+			printf("\n\n");
+		} else {
+			perror("provide map");
+			free(m_bsq);
+			return 1;
+		}
+	}
 	while (i < argc) {
 		m_bsq->num_maps++;
 		if (parser(m_bsq, argv[i++])) {
