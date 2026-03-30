@@ -6,7 +6,7 @@
 /*   By: voparkan <voparkan@student.42prague.cz>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/22 13:20:05 by voparkan          #+#    #+#             */
-/*   Updated: 2026/03/25 10:42:14 by voparkan         ###   ########.fr       */
+/*   Updated: 2026/03/30 21:35:20 by voparkan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,9 +94,8 @@ void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
 	bsq_main->maps->full = line[6];
 }
 
-bool parser(struct main_struct * bsq_main, char *argv) {
+bool parser(struct main_struct * bsq_main, FILE * fd) {
 	char * line = malloc(BUFSIZ*sizeof (char));
-	FILE * fd = fopen(argv, "r");
 	process_header(bsq_main, line, fd);
 	char **lines = malloc((bsq_main->maps->lines + 1) * sizeof(char *));
 	if(!lines) {
@@ -124,7 +123,47 @@ bool parser(struct main_struct * bsq_main, char *argv) {
 	while (*lines && fgets(*lines, BUFSIZ, fd)) {
 		if (strlen(line) == linelen || linelencnt) {
 			if (linelencnt) {
-				linelen = strlen(line);
+				linelen = strlen(*line);
+				linelencnt = false;
+			}
+			*bsq_main->maps->map_lines = *lines;
+			bsq_main->maps->map_lines++;
+			lines++;
+		}
+	}
+	*bsq_main->maps->map_lines = NULL;
+	bsq_main->maps->map_lines = tmp;
+	return  (validate_map(bsq_main->maps));
+}
+
+bool parse_stdin(struct main_struct * bsq_main, FILE * fd, char * line) {
+	char **lines = malloc((bsq_main->maps->lines + 1) * sizeof(char *));
+	if(!lines) {
+		perror("allocation failed");
+		exit(1);
+	}
+	for (int i = 0; i < bsq_main->maps->lines; i++) {
+		lines[i] = malloc(BUFSIZ * sizeof(char));
+		if(!lines[i]) {
+			if (i > 0) {
+				while (i > 0) {
+					free(lines[i - 1]);
+					i--;
+				}
+			}
+			perror("allocation failed");
+			exit(1);
+		}
+	}
+	lines[bsq_main->maps->lines] = NULL;
+	char ** tmp = NULL;
+	tmp = bsq_main->maps->map_lines;
+	int linelen = 0;
+	bool linelencnt = true;
+	while (*lines && fgets(*lines, BUFSIZ, fd)) {
+		if (strlen(line) == linelen || linelencnt) {
+			if (linelencnt) {
+				linelen = strlen(*lines);
 				linelencnt = false;
 			}
 			*bsq_main->maps->map_lines = *lines;
@@ -147,6 +186,7 @@ int find_min(int n1, int n2, int n3) {
 }
 
 void process_map(bsq_main * m_bsq, bsq_square * square) {
+	printf("map size: w: %d, h: %d\n", m_bsq->maps->cols, m_bsq->maps->lines);
 	int height = m_bsq->maps->lines;
 	int width = m_bsq->maps->cols;
 	char **  map = m_bsq->maps->map_lines;
@@ -203,10 +243,10 @@ int main(int argc, char **argv) {
 	if (argc == 1) {
 		//TODO finish STDIN handling
 		m_bsq->num_maps++;
-		char bud[10];
-		read(STDIN_FILENO, bud, 10);
-		printf("STDIN_FILENO: \n%s", bud);
-		if (STDIN_FILENO != NULL && parser(m_bsq, STDIN_FILENO)) {
+//		char * line = malloc(BUFSIZ*sizeof (char));
+//		process_header(m_bsq, line, stdin);
+//		printf("STDIN_FILENO: \n%d, %c, %c, %c\n", m_bsq->maps->lines, m_bsq->maps->empty, m_bsq->maps->obstacle, m_bsq->maps->full);
+		if (m_bsq->maps->lines > 1 && parser(m_bsq, stdin)) {
 			bsq_square square;
 			square.size = 0; square.i = 0; square.j = 0;
 			process_map(m_bsq, &square);
@@ -219,7 +259,9 @@ int main(int argc, char **argv) {
 	}
 	while (i < argc) {
 		m_bsq->num_maps++;
-		if (parser(m_bsq, argv[i++])) {
+		int i = 0;
+		FILE * fd = fopen(argv[i++], "r");
+		if (parser(m_bsq, fd)) {
 			bsq_square square;
 			square.size = 0; square.i = 0; square.j = 0;
 			process_map(m_bsq, &square);
