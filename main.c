@@ -6,7 +6,7 @@
 /*   By: voparkan <voparkan@student.42prague.cz>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/22 13:20:05 by voparkan          #+#    #+#             */
-/*   Updated: 2026/03/25 10:42:14 by voparkan         ###   ########.fr       */
+/*   Updated: 2026/03/30 22:35:41 by voparkan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,9 +14,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <limits.h>
 #include <string.h>
-#include <unistd.h>
 
 typedef struct map {
 	int lines;
@@ -29,7 +27,6 @@ typedef struct map {
 
 typedef struct main_struct {
 	int num_maps;
-	char*** solutions;
 	struct map * maps;
 } bsq_main;
 
@@ -75,11 +72,9 @@ bool validate_map(bsq_map *pMap) {
 }
 
 void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
-	fgets(line, BUFSIZ, fd);
-	char *first_line = line;
-	first_line++;
-	while (!isdigit(*first_line) && isascii(*first_line)) {
-		first_line++;
+	if (!fgets(line, BUFSIZ, fd)) {
+		perror("map error");
+		exit(1);
 	}
 	bsq_main->maps = malloc(sizeof (bsq_map));
 	int lines_count = atoi((const char *)&line[0]);
@@ -94,9 +89,8 @@ void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
 	bsq_main->maps->full = line[6];
 }
 
-bool parser(struct main_struct * bsq_main, char *argv) {
+bool parser(struct main_struct * bsq_main, FILE * fd) {
 	char * line = malloc(BUFSIZ*sizeof (char));
-	FILE * fd = fopen(argv, "r");
 	process_header(bsq_main, line, fd);
 	char **lines = malloc((bsq_main->maps->lines + 1) * sizeof(char *));
 	if(!lines) {
@@ -122,9 +116,9 @@ bool parser(struct main_struct * bsq_main, char *argv) {
 	int linelen = 0;
 	bool linelencnt = true;
 	while (*lines && fgets(*lines, BUFSIZ, fd)) {
-		if (strlen(line) == linelen || linelencnt) {
+		if (strlen(*lines) == linelen || linelencnt) {
 			if (linelencnt) {
-				linelen = strlen(line);
+				linelen = strlen(*lines);
 				linelencnt = false;
 			}
 			*bsq_main->maps->map_lines = *lines;
@@ -201,16 +195,16 @@ int main(int argc, char **argv) {
 	int i = 1;
 	m_bsq->num_maps = -1;
 	if (argc == 1) {
-		//TODO finish STDIN handling
 		m_bsq->num_maps++;
-		char bud[10];
-		read(STDIN_FILENO, bud, 10);
-		printf("STDIN_FILENO: \n%s", bud);
-		if (STDIN_FILENO != NULL && parser(m_bsq, STDIN_FILENO)) {
-			bsq_square square;
-			square.size = 0; square.i = 0; square.j = 0;
-			process_map(m_bsq, &square);
-			printf("\n\n");
+		int ch = getchar();
+		if (ch != EOF) {
+			ungetc(ch, stdin);
+			if (parser(m_bsq, stdin)) {
+				bsq_square square;
+				square.size = 0; square.i = 0; square.j = 0;
+				process_map(m_bsq, &square);
+				printf("\n\n");
+			}
 		} else {
 			perror("provide map");
 			free(m_bsq);
@@ -219,7 +213,8 @@ int main(int argc, char **argv) {
 	}
 	while (i < argc) {
 		m_bsq->num_maps++;
-		if (parser(m_bsq, argv[i++])) {
+		FILE * fd = fopen(argv[i++], "r");
+		if (parser(m_bsq, fd)) {
 			bsq_square square;
 			square.size = 0; square.i = 0; square.j = 0;
 			process_map(m_bsq, &square);
