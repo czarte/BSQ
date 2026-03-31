@@ -6,7 +6,7 @@
 /*   By: voparkan <voparkan@student.42prague.cz>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/22 13:20:05 by voparkan          #+#    #+#             */
-/*   Updated: 2026/03/31 12:31:06 by voparkan         ###   ########.fr       */
+/*   Updated: 2026/03/31 13:28:00 by voparkan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -71,17 +71,19 @@ bool validate_map(bsq_map *pMap) {
 	return true;
 }
 
-void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
+void process_header(struct main_struct * bsq_main, FILE * fd) {
+	char * line = malloc(BUFSIZ*sizeof (char));
 	if (!fgets(line, BUFSIZ, fd)) {
 		perror("map error");
 		exit(1);
 	}
-	bsq_main->maps = malloc(sizeof (bsq_map));
-	int lines_count = atoi((const char *)&line[0]);
-	if ((!isdigit(lines_count)) || (!isalpha(line[4])) || (!isalpha(line[6])) || (!isascii(line[2]))) {
+	if ((!isdigit(line[0])) || (!isalpha(line[4])) || (!isalpha(line[6])) || (!isascii(line[2]))) {
+		free(line);
 		perror("provide map");
 		exit(1);
 	}
+	bsq_main->maps = malloc(sizeof (bsq_map));
+	int lines_count = atoi((const char *)&line[0]);
 	bsq_main->maps->lines = lines_count;
 	bsq_main->maps->map_lines = malloc((lines_count + 1) * sizeof (char *));
 	if(!bsq_main->maps->map_lines) {
@@ -91,11 +93,11 @@ void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
 	bsq_main->maps->empty = line[2];
 	bsq_main->maps->obstacle = line[4];
 	bsq_main->maps->full = line[6];
+	free(line);
 }
 
 bool parser(struct main_struct * bsq_main, FILE * fd) {
-	char * line = malloc(BUFSIZ*sizeof (char));
-	process_header(bsq_main, line, fd);
+	process_header(bsq_main, fd);
 	char **lines = malloc((bsq_main->maps->lines + 1) * sizeof(char *));
 	if(!lines) {
 		perror("allocation failed");
