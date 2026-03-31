@@ -6,7 +6,7 @@
 /*   By: voparkan <voparkan@student.42prague.cz>    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/03/22 13:20:05 by voparkan          #+#    #+#             */
-/*   Updated: 2026/03/30 22:35:41 by voparkan         ###   ########.fr       */
+/*   Updated: 2026/03/31 12:31:06 by voparkan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,6 +78,10 @@ void process_header(struct main_struct * bsq_main, char *line, FILE * fd) {
 	}
 	bsq_main->maps = malloc(sizeof (bsq_map));
 	int lines_count = atoi((const char *)&line[0]);
+	if ((!isdigit(lines_count)) || (!isalpha(line[4])) || (!isalpha(line[6])) || (!isascii(line[2]))) {
+		perror("provide map");
+		exit(1);
+	}
 	bsq_main->maps->lines = lines_count;
 	bsq_main->maps->map_lines = malloc((lines_count + 1) * sizeof (char *));
 	if(!bsq_main->maps->map_lines) {
@@ -214,6 +218,11 @@ int main(int argc, char **argv) {
 	while (i < argc) {
 		m_bsq->num_maps++;
 		FILE * fd = fopen(argv[i++], "r");
+		if (!fd) {
+			perror("provide map");
+			free(m_bsq);
+			return 1;
+		}
 		if (parser(m_bsq, fd)) {
 			bsq_square square;
 			square.size = 0; square.i = 0; square.j = 0;
